@@ -178,7 +178,7 @@ with st.sidebar:
     st.markdown('<div class="sidebar-section-label">Navigate</div>', unsafe_allow_html=True)
     page = st.radio(
         "",
-        ["🏠  Home", "📂  Dataset Viewer", "🔍  Inspection", "🧹  Cleaning"],
+        ["🏠  Home", "📂  Dataset Viewer", "🔍  Inspection", "🧹  Cleaning", "📊  Grouping & Aggregations"],
         label_visibility="collapsed",
     )
     st.markdown("---")
@@ -512,3 +512,171 @@ elif page == "🧹  Cleaning":
     st.markdown('<div class="sub-title">✅ Cleaned Dataset Preview</div>', unsafe_allow_html=True)
     n_preview = st.slider("Rows to preview", 5, 50, 10, key="clean_prev")
     st.dataframe(clean_df.head(n_preview), use_container_width=True)
+ 
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE: GROUPING & AGGREGATIONS
+# ══════════════════════════════════════════════════════════════════════════════
+elif page == "📊  Grouping & Aggregations":
+    st.markdown('<div class="section-title">📊 Grouping & Aggregations</div>', unsafe_allow_html=True)
+    st.markdown("""
+    <div class="info-box">
+    10 analytical questions answered on the cleaned dataset — covering HEC rankings,
+    provincial patterns, research output, fees, employment, dropout rates, and gender equity.
+    </div>
+    """, unsafe_allow_html=True)
+ 
+    c_uni_data = clean_df.copy()
+ 
+    # ── Q1 ────────────────────────────────────────────────────────────────────
+    with st.expander("Q1 — HEC Category Ranking by Avg CGPA", expanded=True):
+        q1 = (
+            c_uni_data.groupby("HEC_Category", observed=False)["Avg_CGPA"]
+            .mean()
+            .sort_values(ascending=False)
+            .reset_index()
+        )
+        q1.columns = ["HEC Category", "Avg CGPA"]
+        q1["Avg CGPA"] = q1["Avg CGPA"].round(3)
+        st.dataframe(q1, use_container_width=True, hide_index=True)
+ 
+    # ── Q2 ────────────────────────────────────────────────────────────────────
+    with st.expander("Q2 — Number of Universities by Province"):
+        q2 = (
+            c_uni_data.groupby("Province", observed=False)["UNI_Name"]
+            .nunique()
+            .sort_values(ascending=False)
+            .reset_index()
+        )
+        q2.columns = ["Province", "Universities"]
+        st.dataframe(q2, use_container_width=True, hide_index=True)
+ 
+    # ── Q3 ────────────────────────────────────────────────────────────────────
+    with st.expander("Q3 — Total Research Papers by Department Category"):
+        q3 = (
+            c_uni_data.groupby("Department_Category", observed=False)["Research_Papers_Published"]
+            .sum()
+            .sort_values(ascending=False)
+            .reset_index()
+        )
+        q3.columns = ["Department Category", "Total Research Papers"]
+        st.dataframe(q3, use_container_width=True, hide_index=True)
+ 
+    # ── Q4 ────────────────────────────────────────────────────────────────────
+    with st.expander("Q4 — Median Fee Per Semester by University Type"):
+        q4 = (
+            c_uni_data.groupby("Type", observed=False)["Fee_Per_Semester_PKR"]
+            .median()
+            .reset_index()
+        )
+        q4.columns = ["University Type", "Median Fee (PKR)"]
+        q4["Median Fee (PKR)"] = q4["Median Fee (PKR)"].apply(lambda x: f"{x:,.0f}")
+        st.dataframe(q4, use_container_width=True, hide_index=True)
+ 
+    # ── Q5 ────────────────────────────────────────────────────────────────────
+    with st.expander("Q5 — Top 5 Cities by Avg Employment Ratio (Min 3 Universities)"):
+        city_counts = c_uni_data.groupby("City", observed=False)["UNI_Name"].nunique()
+        eligible_cities = city_counts[city_counts >= 3].index
+        q5 = (
+            c_uni_data[c_uni_data["City"].isin(eligible_cities)]
+            .groupby("City", observed=False)["Employment_Ratio_Pct"]
+            .mean()
+            .nlargest(5)
+            .reset_index()
+        )
+        q5.columns = ["City", "Avg Employment Ratio (%)"]
+        q5["Avg Employment Ratio (%)"] = q5["Avg Employment Ratio (%)"].round(2)
+        st.dataframe(q5, use_container_width=True, hide_index=True)
+ 
+    # ── Q6 ────────────────────────────────────────────────────────────────────
+    with st.expander("Q6 — Dropout Rates by Province (Overall & Sector Breakdown)"):
+        q6_overall = (
+            c_uni_data.groupby("Province", observed=True)["Dropout_Rate_Pct"]
+            .mean()
+            .sort_values(ascending=False)
+            .reset_index()
+        )
+        q6_overall.columns = ["Province", "Avg Dropout Rate (%)"]
+        q6_overall["Avg Dropout Rate (%)"] = q6_overall["Avg Dropout Rate (%)"].round(2)
+ 
+        q6_breakdown = (
+            c_uni_data.groupby(["Province", "Type"], observed=True)["Dropout_Rate_Pct"]
+            .mean()
+            .sort_values(ascending=False)
+            .reset_index()
+        )
+        q6_breakdown.columns = ["Province", "Type", "Avg Dropout Rate (%)"]
+        q6_breakdown["Avg Dropout Rate (%)"] = q6_breakdown["Avg Dropout Rate (%)"].round(2)
+ 
+        col_a, col_b = st.columns(2)
+        with col_a:
+            st.markdown("**Overall by Province**")
+            st.dataframe(q6_overall, use_container_width=True, hide_index=True)
+        with col_b:
+            st.markdown("**By Province & Type**")
+            st.dataframe(q6_breakdown, use_container_width=True, hide_index=True)
+ 
+    # ── Q7 ────────────────────────────────────────────────────────────────────
+    with st.expander("Q7 — Avg CGPA & Employment by Entry Test Tier"):
+        q7 = (
+            c_uni_data.groupby("Entry_Test_Tier", observed=False)[["Avg_CGPA", "Employment_Ratio_Pct"]]
+            .mean()
+            .round(2)
+            .reset_index()
+        )
+        q7.columns = ["Entry Test Tier", "Avg CGPA", "Avg Employment Ratio (%)"]
+        st.dataframe(q7, use_container_width=True, hide_index=True)
+        st.markdown("""
+        <div class="info-box" style="margin-top:0.75rem">
+        📌 Higher entrance difficulty is associated with stronger CGPAs and better employment outcomes.
+        </div>
+        """, unsafe_allow_html=True)
+ 
+    # ── Q8 ────────────────────────────────────────────────────────────────────
+    with st.expander("Q8 — Province × Department Summary (Enrollment > 50,000)"):
+        q8 = (
+            c_uni_data.groupby(["Province", "Department_Category"], observed=True)
+            .agg(
+                Total_Enrollment=("Total_Enrollment", "sum"),
+                Avg_Student_Faculty_Ratio=("Student_Faculty_Ratio", "mean"),
+                Number_of_Departments=("Department_Name", "nunique"),
+            )
+            .reset_index()
+        )
+        q8 = q8[q8["Total_Enrollment"] > 50000].copy()
+        q8["Avg_Student_Faculty_Ratio"] = q8["Avg_Student_Faculty_Ratio"].round(2)
+        q8.columns = ["Province", "Department Category", "Total Enrollment", "Avg S:F Ratio", "# Departments"]
+        st.dataframe(q8, use_container_width=True, hide_index=True)
+ 
+    # ── Q9 ────────────────────────────────────────────────────────────────────
+    with st.expander("Q9 — Universities Exceeding Provincial Female Share Baseline"):
+        uni_level = (
+            c_uni_data.groupby(["Province", "UNI_Name"], observed=True)
+            .agg(Total_Female=("Female_Enrollment", "sum"), Total_Students=("Total_Enrollment", "sum"))
+            .reset_index()
+        )
+        uni_level["Female_Share"] = uni_level["Total_Female"] / uni_level["Total_Students"]
+        uni_level["Provincial_Avg"] = uni_level.groupby("Province", observed=True)["Female_Share"].transform("mean")
+        q9 = (
+            uni_level[uni_level["Female_Share"] > uni_level["Provincial_Avg"]]
+            .groupby("Province", observed=True)["UNI_Name"]
+            .nunique()
+            .sort_values(ascending=False)
+            .reset_index()
+        )
+        q9.columns = ["Province", "Universities Above Provincial Avg Female Share"]
+        st.dataframe(q9, use_container_width=True, hide_index=True)
+ 
+    # ── Q10 ───────────────────────────────────────────────────────────────────
+    with st.expander("Q10 — Top Research Department Category per Year"):
+        q10 = (
+            c_uni_data.groupby(["Year", "Department_Category"], observed=True)["Research_Papers_Published"]
+            .mean()
+            .reset_index()
+            .sort_values("Research_Papers_Published", ascending=False)
+            .drop_duplicates(subset=["Year"], keep="first")
+            .sort_values("Year")
+            .reset_index(drop=True)
+        )
+        q10.columns = ["Year", "Top Department Category", "Avg Research Papers"]
+        q10["Avg Research Papers"] = q10["Avg Research Papers"].round(2)
+        st.dataframe(q10, use_container_width=True, hide_index=True)
