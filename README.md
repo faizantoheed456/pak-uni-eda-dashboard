@@ -1,122 +1,146 @@
 # 🎓 EDA of Pakistani Universities
  
-<p align="center">
-  <img src="https://img.shields.io/badge/Status-In%20Progress-yellow?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python&logoColor=white" />
-  <img src="https://img.shields.io/badge/Pandas-2.x-150458?style=for-the-badge&logo=pandas&logoColor=white" />
-  <img src="https://img.shields.io/badge/Streamlit-Dashboard-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white" />
-  <img src="https://img.shields.io/badge/Jupyter-Notebook-F37626?style=for-the-badge&logo=jupyter&logoColor=white" />
-</p>
-<p align="center">
-  A solo end-to-end EDA project exploring Pakistan's higher education landscape —<br>
-  enrollment, faculty, research output, fees, dropout rates, and more.<br><br>
-  <b>Author: Faizan Toheed</b>
-</p>
+An end-to-end Exploratory Data Analysis project on Pakistan's higher education landscape — covering data inspection, cleaning, aggregation, feature engineering, and an interactive Streamlit dashboard.
+ 
 ---
  
-## 📁 Repository Structure
+## 📁 Project Structure
  
 ```
-pakistan-universities-eda/
-├── EDA_of_Pakistani_Universities.ipynb       ← Analysis notebook
-├── dashboard.py                              ← Streamlit dashboard
-├── pakistan_universities_dataset.csv         ← Raw dataset
-├── pakistan_universities_dataset_clean.csv   ← Cleaned dataset
-└── README.md
+├── pakistan_universities_dataset.csv         # Raw dataset (2,584 rows × 34 columns)
+├── pakistan_universities_dataset_clean.csv   # Cleaned dataset (2,584 rows × 50 columns)
+├── pakistan_universities_dataset_enhanced.csv# Feature-engineered dataset (2,584 rows × 64 columns)
+├── EDA_of_Pakistani_Universities.ipynb       # Jupyter Notebook — full EDA pipeline
+└── dashboard.py                              # Streamlit interactive dashboard
 ```
  
 ---
  
-## 📊 Dataset
+## 📊 Dataset Overview
  
-| | Raw | Cleaned |
-|---|---|---|
-| Rows | 2,584 | 2,584 |
-| Columns | 34 | 50 |
-| Missing Values | 5,384 | 452 |
-| Universities | 91 | 91 |
-| Provinces | 7 (AJK, Balochistan, GB, Islamabad, KPK, Punjab, Sindh) | — |
-| Years | 2022 – 2025 | — |
-| University Types | Public, Private | — |
- 
-The 16 extra columns in the cleaned dataset are boolean imputation audit flags (`column_is_imputed`).
- 
----
- 
-## 🗺️ Progress
- 
-| Session | Topic | Status |
-|---|---|---|
-| 1 | Loading & Inspection | ✅ Complete |
-| 2 | Data Cleaning | ✅ Complete |
-| 3 | Grouping & Aggregations | ✅ Complete |
-| 4 | Feature Engineering | 🔜 Upcoming |
-| 5 | Visualization | 🔜 Upcoming |
- 
----
- 
-## 📓 Notebook Walkthrough
- 
-### Session 1 — Loading & Inspection
-15 structured inspection steps: head/tail rows, shape, dtypes, null profile, descriptive stats, memory usage, unique value counts, numeric vs categorical breakdown, random sampling, and index inspection.
- 
-### Session 2 — Data Cleaning
-An 8-step pipeline applied to the raw dataset:
- 
-1. Replace disguised nulls (`'N/A'`, `'na'`, `'unknown'`, empty strings) with `pd.NA`
-2. Create boolean imputation flag columns before any filling
-3. Repair `HEC_Ranking` — strip decimal artifacts, map missing to `'None'`
-4. Fill numeric columns via per-university median, falling back to global median
-5. Reconstruct `BS_Students`, `PhD_Students`, `MS_MPhil_Students` from `Total_Enrollment`
-6. Impute `Avg_Student_Background` with province-level mode to reduce urban bias
-7. Strip leading/trailing whitespace from all string columns
-8. Downcast numeric dtypes; convert 12 categorical columns to `category`
-### Session 3 — Grouping & Aggregations
-10 analytical questions on the cleaned data:
- 
-- HEC category ranking by average CGPA
-- University count by province
-- Research output by department category
-- Median semester fee by university type
-- Top 5 cities by employment ratio (min 3 universities)
-- Dropout rates by province — overall and split by sector
-- CGPA and employment by entry test difficulty tier
-- Province × department summary for enrollments above 50,000
-- Universities exceeding their provincial female share baseline
-- Top research department category per year (2022–2025)
----
- 
-## 🖥️ Dashboard
- 
-Interactive Streamlit dashboard with a white and blue theme across five pages:
- 
-| Page | What's inside |
+| Property | Value |
 |---|---|
-| Home | KPI cards, project overview, column inventory |
-| Dataset Viewer | Filter and explore raw and cleaned datasets; side-by-side column comparison |
-| Inspection | All 15 inspection steps as expandable panels |
-| Cleaning | Pipeline steps, imputation flag explorer, cleaned data preview |
-| Grouping & Aggregations | All 10 analysis questions as interactive tables |
+| Source | Pakistani universities (multi-year, department-level) |
+| Raw Shape | 2,584 rows × 34 columns |
+| Universities | Multiple institutions across all provinces |
+| Provinces | Across Pakistan including AJK, Punjab, Sindh, KPK, Balochistan, and others |
  
-### Running locally
+### Key Columns
+ 
+| Column | Description |
+|---|---|
+| `UNI_ID` / `UNI_Name` | University identifier and name |
+| `Type` | Public or Private |
+| `Province` / `City` | Geographic location |
+| `HEC_Ranking` / `HEC_Category` | Higher Education Commission ranking and tier |
+| `Total_Enrollment` | Total student count |
+| `Male_Enrollment` / `Female_Enrollment` | Gender-disaggregated enrollment |
+| `Faculty_Count` / `Student_Faculty_Ratio` | Faculty metrics |
+| `PhD_Students` / `MS_MPhil_Students` / `BS_Students` | Program-level enrollment |
+| `Research_Papers_Published` | Annual research output |
+| `Avg_CGPA` | Average student CGPA |
+| `Employment_Ratio_Pct` | Graduate employment rate |
+| `Dropout_Rate_Pct` | Student dropout percentage |
+| `Fee_Per_Semester_PKR` | Tuition fee per semester |
+| `Entry_Test_Required` / `Entry_Test_Tier` | Admission selectivity |
+ 
+---
+ 
+## 🔬 Analysis Pipeline
+ 
+### 1. Loading & Inspection (`EDA_of_Pakistani_Universities.ipynb`)
+ 
+15 structured inspection steps including shape analysis, data types, null coverage, memory usage, statistical summaries, and index profiling.
+ 
+### 2. Data Cleaning (8-Step Pipeline)
+ 
+| Step | Action |
+|---|---|
+| 1 | Replace disguised nulls (`'N/A'`, `'na'`, `'unknown'`, `''`) with `pd.NA` |
+| 2 | Create 16 boolean `_is_imputed` flag columns before any filling |
+| 3 | Clean `HEC_Ranking` — strip decimals, coerce to int, map zeros to `'None'` |
+| 4 | Numeric imputation via university-specific medians, fallback to global median |
+| 5 | Logically reconstruct `BS_Students`, `PhD_Students`, `MS_MPhil_Students` from `Total_Enrollment` |
+| 6 | Categorical imputation using province-level mode (reduces urban bias) |
+| 7 | Strip whitespace from all object-type columns |
+| 8 | Downcast numeric dtypes and convert 12 text columns to `category` dtype |
+ 
+**Result:** 0 structural missing values remaining; 16 new audit flag columns added.
+ 
+### 3. Grouping & Aggregations (10 Questions)
+ 
+| # | Question |
+|---|---|
+| Q1 | HEC category ranking by average CGPA |
+| Q2 | Number of universities by province |
+| Q3 | Total research papers by department category |
+| Q4 | Median fee per semester by university type |
+| Q5 | Top 5 cities by employment ratio (min. 3 universities) |
+| Q6 | Dropout rates by province — overall and public/private breakdown |
+| Q7 | Average CGPA and employment by entry test difficulty tier |
+| Q8 | Province × department summary for enrollments > 50,000 |
+| Q9 | Universities exceeding their provincial female share baseline |
+| Q10 | Top research department category per year |
+ 
+### 4. Feature Engineering (14 New Features)
+ 
+| Feature | Description |
+|---|---|
+| `Female_Share_Pct` | Female enrollment as % of total |
+| `Gender_Balance_Category` | Male Dominated / Balanced / Female Dominated |
+| `Annual_Fee_PKR` | Semester fee × 2 |
+| `Fee_Band` | Percentile-based Low / Mid / High bands |
+| `Research_Per_Faculty` | Research papers ÷ faculty count |
+| `Campus_Density` | Total enrollment ÷ number of buildings |
+| `Is_Overcrowded` | 1 if campus density > 1.5× national median |
+| `PG_Ratio` | % of students in MS/MPhil or PhD programs |
+| `Is_Research_Focused` | 1 if PG Ratio > 30% AND research/faculty > national median |
+| `Selectivity_Score` | Entry test tier (50%) + normalised CGPA (50%), range 0–3 |
+| `University_Score` | Weighted composite: Employment (35%) + Research/Faculty (25%) + CGPA (25%) + Industry Tie-Ups (15%) |
+| `Fee_Value_Score` | Employment ratio ÷ annual fee × 100,000 |
+| `Peer_CGPA_Gap` | University CGPA minus Province × HEC Category group mean |
+| `Risk_Index` | Equal-weighted: dropout rate + student-faculty ratio + inverted female share, range 0–1 |
+ 
+---
+ 
+## 🖥️ Streamlit Dashboard
+ 
+An interactive web dashboard with 6 pages:
+ 
+| Page | Contents |
+|---|---|
+| 🏠 Home | KPI cards (universities, enrollment, CGPA, research), column overview, data snapshot |
+| 📂 Dataset Viewer | Filterable raw/clean table views with side-by-side column comparison |
+| 🔍 Inspection | All 15 inspection steps as interactive expanders |
+| 🧹 Cleaning | Pipeline steps, before/after missing value metrics, imputation flag explorer |
+| 📊 Grouping & Aggregations | All 10 analytical questions with live tables |
+| ⚙️ Feature Engineering | All 14 engineered features with per-feature summaries and top-university rankings |
+ 
+### Running the Dashboard
  
 ```bash
-# Install dependencies
 pip install streamlit pandas numpy
- 
-# Launch
 streamlit run dashboard.py
 ```
  
-> Make sure all four files (both CSVs, the notebook, and `dashboard.py`) are in the same folder.
+Make sure all three CSV files are in the same directory as `dashboard.py`.
  
 ---
  
-## 🛠️ Tech Stack
+## 🛠️ Requirements
  
-`Python 3.10+` · `Pandas` · `NumPy` · `Streamlit` · `Jupyter`  
-Matplotlib · Seaborn · Plotly *(planned for Session 5)*
+```
+pandas
+numpy
+streamlit
+jupyter
+```
  
 ---
  
-<p align="center">Made with 🧠 and ☕ by <b>Faizan Toheed</b> — solo, steady, and shipping.</p>
+## 📌 Key Findings
+ 
+- Entry test selectivity correlates positively with both CGPA and graduate employment outcomes.
+- Province-level mode imputation was used for student background to avoid urban dominance bias.
+- Logical arithmetic constraints were applied to preserve internal consistency across enrollment sub-groups.
+- The composite `University_Score` and `Risk_Index` provide a holistic view of institutional quality and vulnerability.
