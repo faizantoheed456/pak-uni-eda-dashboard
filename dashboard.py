@@ -165,20 +165,26 @@ def load_raw():
 @st.cache_data
 def load_clean():
     return pd.read_csv("pakistan_universities_dataset_clean.csv")
- 
-raw_df   = load_raw()
-clean_df = load_clean()
- 
+
+@st.cache_data
+def load_enhanced():
+    return pd.read_csv("pakistan_universities_dataset_enhanced.csv")
+
+raw_df      = load_raw()
+clean_df    = load_clean()
+enhanced_df = load_enhanced()
+
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("## 🎓 EDA Dashboard")
     st.markdown("**Pakistani Universities**")
     st.markdown("---")
- 
+
     st.markdown('<div class="sidebar-section-label">Navigate</div>', unsafe_allow_html=True)
     page = st.radio(
         "",
-        ["🏠  Home", "📂  Dataset Viewer", "🔍  Inspection", "🧹  Cleaning", "📊  Grouping & Aggregations"],
+        ["🏠  Home", "📂  Dataset Viewer", "🔍  Inspection", "🧹  Cleaning",
+         "📊  Grouping & Aggregations", "⚙️  Feature Engineering"],
         label_visibility="collapsed",
     )
     st.markdown("---")
@@ -186,6 +192,7 @@ with st.sidebar:
     st.markdown(f"**Raw rows:** {raw_df.shape[0]:,}")
     st.markdown(f"**Raw cols:** {raw_df.shape[1]}")
     st.markdown(f"**Clean cols:** {clean_df.shape[1]}")
+    st.markdown(f"**Enhanced cols:** {enhanced_df.shape[1]}")
     st.markdown(f"**Universities:** {raw_df['UNI_Name'].nunique()}")
     st.markdown(f"**Provinces:** {raw_df['Province'].nunique()}")
  
@@ -680,3 +687,242 @@ elif page == "📊  Grouping & Aggregations":
         q10.columns = ["Year", "Top Department Category", "Avg Research Papers"]
         q10["Avg Research Papers"] = q10["Avg Research Papers"].round(2)
         st.dataframe(q10, use_container_width=True, hide_index=True)
+ 
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE: FEATURE ENGINEERING
+# ══════════════════════════════════════════════════════════════════════════════
+elif page == "⚙️  Feature Engineering":
+    st.markdown('<div class="section-title">⚙️ Feature Engineering</div>', unsafe_allow_html=True)
+    st.markdown("""
+    <div class="info-box">
+    11 new features engineered from the cleaned dataset — covering gender equity, fees,
+    research productivity, campus density, selectivity, institutional scoring, and risk profiling.
+    The enhanced dataset has <strong>64 columns</strong> (50 cleaned + 14 engineered).
+    </div>
+    """, unsafe_allow_html=True)
+ 
+    enh = enhanced_df.copy()
+    new_cols = [
+        "Female_Share_Pct", "Gender_Balance_Category", "Annual_Fee_PKR", "Fee_Band",
+        "Research_Per_Faculty", "Campus_Density", "Is_Overcrowded", "PG_Ratio",
+        "Is_Research_Focused", "Selectivity_Score", "University_Score",
+        "Fee_Value_Score", "Peer_CGPA_Gap", "Risk_Index",
+    ]
+ 
+    # ── KPI row ──
+    overcrowded_pct = (enh["Is_Overcrowded"].sum() / len(enh) * 100)
+    research_focused_pct = (enh["Is_Research_Focused"].sum() / len(enh) * 100)
+    avg_selectivity = enh["Selectivity_Score"].mean()
+    avg_risk = enh["Risk_Index"].mean()
+ 
+    st.markdown(f"""
+    <div class="metric-row">
+        <div class="metric-card"><div class="val">14</div><div class="lbl">New Features</div></div>
+        <div class="metric-card"><div class="val">{overcrowded_pct:.1f}%</div><div class="lbl">Overcrowded Campuses</div></div>
+        <div class="metric-card"><div class="val">{research_focused_pct:.1f}%</div><div class="lbl">Research Focused</div></div>
+        <div class="metric-card"><div class="val">{avg_selectivity:.2f}</div><div class="lbl">Avg Selectivity Score</div></div>
+        <div class="metric-card"><div class="val">{avg_risk:.2f}</div><div class="lbl">Avg Risk Index</div></div>
+    </div>
+    """, unsafe_allow_html=True)
+ 
+    st.markdown('<hr class="orange-divider">', unsafe_allow_html=True)
+ 
+    # ── Feature 1 & 2: Gender ─────────────────────────────────────────────────
+    with st.expander("F1 & F2 — Female Share % & Gender Balance Category", expanded=True):
+        st.markdown("""
+        <div class="info-box">
+        <strong>Female_Share_Pct</strong>: Female enrollment as a % of total enrollment.<br>
+        <strong>Gender_Balance_Category</strong>: Binned into <em>Male Dominated</em> (&lt;30%), 
+        <em>Balanced</em> (30–60%), or <em>Female Dominated</em> (&gt;60%).
+        </div>
+        """, unsafe_allow_html=True)
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("**Distribution by Gender Balance Category**")
+            gb = enh["Gender_Balance_Category"].value_counts().reset_index()
+            gb.columns = ["Category", "Count"]
+            gb["Share %"] = (gb["Count"] / len(enh) * 100).round(1)
+            st.dataframe(gb, use_container_width=True, hide_index=True)
+        with col2:
+            st.markdown("**Female Share % — Summary**")
+            st.dataframe(
+                enh["Female_Share_Pct"].describe().round(2).reset_index().rename(
+                    columns={"index": "Stat", "Female_Share_Pct": "Value"}
+                ), use_container_width=True, hide_index=True
+            )
+ 
+    # ── Feature 3 & 4: Fee ────────────────────────────────────────────────────
+    with st.expander("F3 & F4 — Annual Fee & Fee Band"):
+        st.markdown("""
+        <div class="info-box">
+        <strong>Annual_Fee_PKR</strong>: Semester fee × 2.<br>
+        <strong>Fee_Band</strong>: Percentile-based bands — <em>Low</em> (bottom 33%), 
+        <em>Mid</em> (33–66%), <em>High</em> (top 33%).
+        </div>
+        """, unsafe_allow_html=True)
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("**Fee Band Distribution**")
+            fb = enh["Fee_Band"].value_counts().reset_index()
+            fb.columns = ["Fee Band", "Count"]
+            st.dataframe(fb, use_container_width=True, hide_index=True)
+        with col2:
+            st.markdown("**Avg Annual Fee by University Type (PKR)**")
+            fee_type = enh.groupby("Type", observed=True)["Annual_Fee_PKR"].mean().round(0).reset_index()
+            fee_type.columns = ["Type", "Avg Annual Fee (PKR)"]
+            fee_type["Avg Annual Fee (PKR)"] = fee_type["Avg Annual Fee (PKR)"].apply(lambda x: f"{x:,.0f}")
+            st.dataframe(fee_type, use_container_width=True, hide_index=True)
+ 
+    # ── Feature 5: Research Per Faculty ───────────────────────────────────────
+    with st.expander("F5 — Research Productivity Per Faculty"):
+        st.markdown("""
+        <div class="info-box">
+        <strong>Research_Per_Faculty</strong>: Research papers published ÷ faculty count.
+        Measures research output efficiency per faculty member.
+        </div>
+        """, unsafe_allow_html=True)
+        rpf = enh.groupby("Province", observed=True)["Research_Per_Faculty"].mean().round(3).sort_values(ascending=False).reset_index()
+        rpf.columns = ["Province", "Avg Research Per Faculty"]
+        st.dataframe(rpf, use_container_width=True, hide_index=True)
+ 
+    # ── Feature 6 & 7: Campus Density ─────────────────────────────────────────
+    with st.expander("F6 & F7 — Campus Density & Overcrowding Flag"):
+        st.markdown("""
+        <div class="info-box">
+        <strong>Campus_Density</strong>: Total enrollment ÷ number of buildings.<br>
+        <strong>Is_Overcrowded</strong>: 1 if campus density exceeds 1.5× the national median.
+        </div>
+        """, unsafe_allow_html=True)
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("**Overcrowded vs Normal by Province**")
+            oc = enh.groupby("Province", observed=True)["Is_Overcrowded"].mean().mul(100).round(1).reset_index()
+            oc.columns = ["Province", "Overcrowded %"]
+            st.dataframe(oc, use_container_width=True, hide_index=True)
+        with col2:
+            st.markdown("**Campus Density — Summary**")
+            st.dataframe(
+                enh["Campus_Density"].describe().round(2).reset_index().rename(
+                    columns={"index": "Stat", "Campus_Density": "Value"}
+                ), use_container_width=True, hide_index=True
+            )
+ 
+    # ── Feature 8 & 9: PG Ratio & Research Focus ──────────────────────────────
+    with st.expander("F8 & F9 — PG Ratio & Research Focus Flag"):
+        st.markdown("""
+        <div class="info-box">
+        <strong>PG_Ratio</strong>: % of students enrolled in MS/MPhil or PhD programs.<br>
+        <strong>Is_Research_Focused</strong>: 1 if PG Ratio &gt; 30% <em>and</em> research per faculty 
+        exceeds the national median — both conditions must hold.
+        </div>
+        """, unsafe_allow_html=True)
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("**Avg PG Ratio by HEC Category**")
+            pg = enh.groupby("HEC_Category", observed=True)["PG_Ratio"].mean().round(2).sort_values(ascending=False).reset_index()
+            pg.columns = ["HEC Category", "Avg PG Ratio (%)"]
+            st.dataframe(pg, use_container_width=True, hide_index=True)
+        with col2:
+            st.markdown("**Research Focused Universities by Province**")
+            rf = enh.groupby("Province", observed=True)["Is_Research_Focused"].sum().sort_values(ascending=False).reset_index()
+            rf.columns = ["Province", "Research Focused Count"]
+            st.dataframe(rf, use_container_width=True, hide_index=True)
+ 
+    # ── Feature 10: Selectivity Score ─────────────────────────────────────────
+    with st.expander("F10 — Selectivity Score"):
+        st.markdown("""
+        <div class="info-box">
+        <strong>Selectivity_Score</strong>: Composite of entry test difficulty tier (50%) 
+        and normalised average CGPA (50%). Range: 0–3.
+        </div>
+        """, unsafe_allow_html=True)
+        sel = enh.groupby("Entry_Test_Tier", observed=True)["Selectivity_Score"].mean().round(3).sort_values(ascending=False).reset_index()
+        sel.columns = ["Entry Test Tier", "Avg Selectivity Score"]
+        st.dataframe(sel, use_container_width=True, hide_index=True)
+ 
+    # ── Feature 11: University Score ──────────────────────────────────────────
+    with st.expander("F11 — Composite University Score"):
+        st.markdown("""
+        <div class="info-box">
+        <strong>University_Score</strong>: Weighted composite —
+        Employment (35%) + Research Per Faculty (25%) + Avg CGPA (25%) + Industry Tie-Ups (15%).
+        All metrics normalised to [0, 1] before weighting.
+        </div>
+        """, unsafe_allow_html=True)
+        top_unis = (
+            enh.groupby("UNI_Name", observed=True)["University_Score"]
+            .mean()
+            .round(4)
+            .sort_values(ascending=False)
+            .head(15)
+            .reset_index()
+        )
+        top_unis.columns = ["University", "Avg University Score"]
+        top_unis.index = top_unis.index + 1
+        st.markdown("**Top 15 Universities by Score**")
+        st.dataframe(top_unis, use_container_width=True)
+ 
+    # ── Feature 12: Fee Value Score ───────────────────────────────────────────
+    with st.expander("F12 — Fee Value Score"):
+        st.markdown("""
+        <div class="info-box">
+        <strong>Fee_Value_Score</strong>: Employment ratio ÷ annual fee × 100,000.
+        Higher score = more employment outcome per rupee spent.
+        </div>
+        """, unsafe_allow_html=True)
+        fvs = enh.groupby("Type", observed=True)["Fee_Value_Score"].mean().round(4).reset_index()
+        fvs.columns = ["University Type", "Avg Fee Value Score"]
+        st.dataframe(fvs, use_container_width=True, hide_index=True)
+ 
+    # ── Feature 13: Peer CGPA Gap ─────────────────────────────────────────────
+    with st.expander("F13 — Peer CGPA Gap (Regional Tier Benchmarking)"):
+        st.markdown("""
+        <div class="info-box">
+        <strong>Peer_CGPA_Gap</strong>: Each university's avg CGPA minus the mean CGPA 
+        of all universities in the same Province × HEC Category group.
+        Positive = above peers; negative = below peers.
+        </div>
+        """, unsafe_allow_html=True)
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("**Top 10 — Above Their Peers**")
+            above = (
+                enh.groupby("UNI_Name", observed=True)["Peer_CGPA_Gap"]
+                .mean().round(3).sort_values(ascending=False).head(10).reset_index()
+            )
+            above.columns = ["University", "Peer CGPA Gap"]
+            st.dataframe(above, use_container_width=True, hide_index=True)
+        with col2:
+            st.markdown("**Bottom 10 — Below Their Peers**")
+            below = (
+                enh.groupby("UNI_Name", observed=True)["Peer_CGPA_Gap"]
+                .mean().round(3).sort_values(ascending=True).head(10).reset_index()
+            )
+            below.columns = ["University", "Peer CGPA Gap"]
+            st.dataframe(below, use_container_width=True, hide_index=True)
+ 
+    # ── Feature 14: Risk Index ────────────────────────────────────────────────
+    with st.expander("F14 — Institutional Risk Index"):
+        st.markdown("""
+        <div class="info-box">
+        <strong>Risk_Index</strong>: Equal-weighted average of normalised dropout rate, 
+        student-faculty ratio, and inverted female share percentage.
+        Range: 0 (low risk) → 1 (high risk).
+        </div>
+        """, unsafe_allow_html=True)
+        risk = enh.groupby("Province", observed=True)["Risk_Index"].mean().round(3).sort_values(ascending=False).reset_index()
+        risk.columns = ["Province", "Avg Risk Index"]
+        st.dataframe(risk, use_container_width=True, hide_index=True)
+ 
+    # ── Enhanced dataset preview ──────────────────────────────────────────────
+    st.markdown('<hr class="orange-divider">', unsafe_allow_html=True)
+    st.markdown('<div class="sub-title">📋 Enhanced Dataset Preview</div>', unsafe_allow_html=True)
+    col_opts = st.multiselect(
+        "Select columns to display",
+        options=enh.columns.tolist(),
+        default=["UNI_Name", "Province", "Type"] + new_cols[:6],
+        key="fe_cols"
+    )
+    n_fe = st.slider("Rows to show", 5, 50, 10, key="fe_rows")
+    if col_opts:
+        st.dataframe(enh[col_opts].head(n_fe), use_container_width=True, hide_index=True)
