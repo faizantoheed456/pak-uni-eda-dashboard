@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import plotly.express as px
  
 # ── Page config ──────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -9,6 +10,48 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+# ── Page config ──────────────────────────────────────────────────────────────
+st.set_page_config(
+    page_title="Pakistani Universities EDA",
+    page_icon="🎓",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+# ── FIX STREAMLIT TOP WHITE STRIP ───────────────────────────────────────────
+st.markdown("""
+<style>
+
+/* Remove top padding */
+.block-container {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+}
+
+/* Remove Streamlit header white bar */
+header[data-testid="stHeader"] {
+    background: rgba(0,0,0,0);
+    height: 0rem;
+}
+
+/* Remove top decoration line */
+[data-testid="stDecoration"] {
+    display: none;
+}
+
+/* Adjust toolbar position */
+[data-testid="stToolbar"] {
+    right: 1rem;
+}
+
+/* Remove extra gap above app */
+main > div {
+    padding-top: 0rem !important;
+}
+
+</style>
+""", unsafe_allow_html=True)
  
 # ── Custom CSS — white + blue theme ────────────────────────────────────────
 st.markdown("""
@@ -184,7 +227,7 @@ with st.sidebar:
     page = st.radio(
         "",
         ["🏠  Home", "📂  Dataset Viewer", "🔍  Inspection", "🧹  Cleaning",
-         "📊  Grouping & Aggregations", "⚙️  Feature Engineering"],
+         "📊  Grouping & Aggregations", "⚙️  Feature Engineering", "📈  Visualizations"],
         label_visibility="collapsed",
     )
     st.markdown("---")
@@ -926,3 +969,323 @@ elif page == "⚙️  Feature Engineering":
     n_fe = st.slider("Rows to show", 5, 50, 10, key="fe_rows")
     if col_opts:
         st.dataframe(enh[col_opts].head(n_fe), use_container_width=True, hide_index=True)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE: VISUALIZATIONS
+# ══════════════════════════════════════════════════════════════════════════════
+elif page == "📈  Visualizations":
+    st.markdown('<div class="section-title">📈 Advanced Visualizations</div>', unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="info-box">
+    Interactive visual analytics for Pakistani universities dataset —
+    exploring enrollment trends, research productivity, fee distributions,
+    employment outcomes, and institutional performance across provinces.
+    </div>
+    """, unsafe_allow_html=True)
+
+    c_uni_data = clean_df.copy()
+    enhanced_uni_data = enhanced_df.copy()
+
+    # ── Visualization Art Header ─────────────────────────────────────────────
+    st.markdown("""
+    <div style="
+        background: linear-gradient(135deg, #1a3c6e, #2980b9);
+        border-radius: 18px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        text-align:center;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    ">
+        <h1 style="color:white; margin-bottom:0.5rem;">
+            🎨 University Intelligence Visualization Hub
+        </h1>
+        <p style="color:rgba(255,255,255,0.9); font-size:1rem;">
+            Transforming educational data into meaningful visual stories
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── Chart 1 ──────────────────────────────────────────────────────────────
+    st.markdown('<div class="sub-title">🏛 Universities Per Province</div>', unsafe_allow_html=True)
+
+    total_uni_pro = (
+        c_uni_data.groupby('Province', observed=False)['UNI_Name']
+        .nunique()
+        .sort_values(ascending=False)
+    )
+
+    fig1 = px.bar(
+        total_uni_pro,
+        x=total_uni_pro.index,
+        y=total_uni_pro.values,
+        color=total_uni_pro.index,
+        text_auto=True,
+        title='Number of Universities Per Province',
+        color_discrete_sequence=px.colors.qualitative.Plotly
+    )
+
+    fig1.update_layout(
+        title_x=0.5,
+        showlegend=False,
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        height=500
+    )
+
+    st.plotly_chart(fig1, use_container_width=True)
+
+    # ── Chart 2 ──────────────────────────────────────────────────────────────
+    st.markdown('<div class="sub-title">🥧 Public vs Private Universities</div>', unsafe_allow_html=True)
+
+    share_type = (
+        c_uni_data.groupby('Type', observed=False)['UNI_Name']
+        .nunique()
+        .reset_index(name='University_Count')
+    )
+
+    fig2 = px.pie(
+        share_type,
+        names='Type',
+        values='University_Count',
+        title='Share of Universities by Type',
+        color_discrete_sequence=px.colors.qualitative.Safe
+    )
+
+    fig2.update_traces(
+        textinfo="label+percent",
+        marker=dict(line=dict(color="#ffffff", width=2))
+    )
+
+    fig2.update_layout(title_x=0.5)
+
+    st.plotly_chart(fig2, use_container_width=True)
+
+    # ── Chart 3 ──────────────────────────────────────────────────────────────
+    st.markdown('<div class="sub-title">📚 Research Papers by Department</div>', unsafe_allow_html=True)
+
+    research_dept = (
+        c_uni_data.groupby('Department_Category', observed=False)['Research_Papers_Published']
+        .sum()
+        .reset_index()
+        .sort_values(by='Research_Papers_Published', ascending=False)
+        .head(10)
+    )
+
+    fig3 = px.bar(
+        research_dept,
+        x='Research_Papers_Published',
+        y='Department_Category',
+        orientation='h',
+        color='Department_Category',
+        text_auto=True,
+        title='Top Department Categories by Research Output',
+        color_discrete_sequence=px.colors.qualitative.Plotly
+    )
+
+    fig3.update_layout(
+        title_x=0.5,
+        showlegend=False,
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        height=600
+    )
+
+    st.plotly_chart(fig3, use_container_width=True)
+
+    # ── Chart 4 ──────────────────────────────────────────────────────────────
+    st.markdown('<div class="sub-title">💰 Fee Distribution by University Type</div>', unsafe_allow_html=True)
+
+    fig4 = px.box(
+        c_uni_data,
+        x='Type',
+        y='Fee_Per_Semester_PKR',
+        color='Type',
+        title='Distribution of Semester Fee by University Type',
+        color_discrete_sequence=px.colors.qualitative.Safe
+    )
+
+    fig4.update_layout(
+        title_x=0.5,
+        showlegend=False,
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)"
+    )
+
+    st.plotly_chart(fig4, use_container_width=True)
+
+    # ── Chart 5 ──────────────────────────────────────────────────────────────
+    st.markdown('<div class="sub-title">🎯 Employment Ratio vs CGPA</div>', unsafe_allow_html=True)
+
+    fig5 = px.scatter(
+        c_uni_data,
+        x='Avg_CGPA',
+        y='Employment_Ratio_Pct',
+        color='HEC_Category',
+        hover_data=['UNI_Name', 'City'],
+        title='Employment Ratio vs Average CGPA',
+        color_discrete_sequence=px.colors.qualitative.Safe
+    )
+
+    fig5.update_layout(
+        title_x=0.5,
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        height=600
+    )
+
+    st.plotly_chart(fig5, use_container_width=True)
+
+    # ── Chart 6 ──────────────────────────────────────────────────────────────
+    st.markdown('<div class="sub-title">📉 Dropout Rate Analysis</div>', unsafe_allow_html=True)
+
+    drop_uni = (
+        c_uni_data.groupby(['Province', 'Type'], observed=False)['Dropout_Rate_Pct']
+        .mean()
+        .reset_index()
+    )
+
+    fig6 = px.bar(
+        drop_uni,
+        x='Province',
+        y='Dropout_Rate_Pct',
+        color='Type',
+        barmode='group',
+        text_auto='.1f',
+        title='Average Dropout Rate by Province and University Type',
+        color_discrete_sequence=px.colors.qualitative.Safe
+    )
+
+    fig6.update_layout(
+        title_x=0.5,
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        height=550
+    )
+
+    st.plotly_chart(fig6, use_container_width=True)
+
+    # ── Chart 7 ──────────────────────────────────────────────────────────────
+    st.markdown('<div class="sub-title">🔬 Research Productivity Distribution</div>', unsafe_allow_html=True)
+
+    fig7 = px.histogram(
+        enhanced_uni_data,
+        x='Research_Per_Faculty',
+        color='HEC_Category',
+        nbins=30,
+        opacity=0.7,
+        barmode='overlay',
+        title='Distribution of Research Output Per Faculty',
+        color_discrete_sequence=px.colors.qualitative.Safe
+    )
+
+    fig7.update_layout(
+        title_x=0.5,
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        height=550
+    )
+
+    st.plotly_chart(fig7, use_container_width=True)
+
+    # ── Chart 8 ──────────────────────────────────────────────────────────────
+    st.markdown('<div class="sub-title">💼 Fee vs Employment Ratio</div>', unsafe_allow_html=True)
+
+    fig8 = px.scatter(
+        c_uni_data,
+        x='Fee_Per_Semester_PKR',
+        y='Employment_Ratio_Pct',
+        color='Province',
+        size='Total_Enrollment',
+        hover_data=['UNI_Name'],
+        title='Employment Ratio vs Fee Per Semester',
+        color_discrete_sequence=px.colors.qualitative.Safe,
+        size_max=30
+    )
+
+    fig8.update_layout(
+        title_x=0.5,
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        height=650
+    )
+
+    st.plotly_chart(fig8, use_container_width=True)
+
+    # ── Chart 9 ──────────────────────────────────────────────────────────────
+    st.markdown('<div class="sub-title">🏆 University Score Across Provinces</div>', unsafe_allow_html=True)
+
+    facet_data = (
+        enhanced_uni_data.groupby(['Province', 'HEC_Category'], observed=False)['University_Score']
+        .mean()
+        .reset_index()
+    )
+
+    fig9 = px.bar(
+        facet_data,
+        x='HEC_Category',
+        y='University_Score',
+        color='HEC_Category',
+        facet_col='Province',
+        facet_col_wrap=3,
+        text_auto='.1f',
+        title='Average University Score by HEC Category Across Provinces',
+        color_discrete_sequence=px.colors.qualitative.Safe
+    )
+
+    fig9.update_layout(
+        title_x=0.5,
+        showlegend=False,
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        height=900
+    )
+
+    st.plotly_chart(fig9, use_container_width=True)
+
+    # ── Chart 10 ─────────────────────────────────────────────────────────────
+    st.markdown('<div class="sub-title">📈 Research Trends Over Time</div>', unsafe_allow_html=True)
+
+    line_data = (
+        c_uni_data.groupby(['Year', 'Department_Category'], observed=False)['Research_Papers_Published']
+        .mean()
+        .reset_index()
+    )
+
+    fig10 = px.line(
+        line_data,
+        x='Year',
+        y='Research_Papers_Published',
+        color='Department_Category',
+        markers=True,
+        title='Average Research Papers Published Over Time',
+        color_discrete_sequence=px.colors.qualitative.Safe
+    )
+
+    fig10.update_layout(
+        title_x=0.5,
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        height=650
+    )
+
+    st.plotly_chart(fig10, use_container_width=True)
+
+    st.markdown("""
+    <div style="
+        margin-top:2rem;
+        padding:1.5rem;
+        border-radius:14px;
+        background:#f0f5ff;
+        border-left:6px solid #1a3c6e;
+    ">
+        <h3 style="color:#1a3c6e;">📌 Visualization Insights</h3>
+        <ul style="line-height:1.9;">
+            <li>Punjab dominates in the number of universities.</li>
+            <li>Research-intensive departments consistently outperform others.</li>
+            <li>Higher CGPA trends generally correlate with better employment ratios.</li>
+            <li>Private universities typically have higher semester fee distributions.</li>
+            <li>Research productivity varies significantly across HEC categories.</li>
+        </ul>
+    </div>
+    """, unsafe_allow_html=True)
