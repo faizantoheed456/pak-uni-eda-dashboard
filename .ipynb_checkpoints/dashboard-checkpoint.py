@@ -11,13 +11,6 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── Page config ──────────────────────────────────────────────────────────────
-st.set_page_config(
-    page_title="Pakistani Universities EDA",
-    page_icon="🎓",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
 
 # ── FIX STREAMLIT TOP WHITE STRIP ───────────────────────────────────────────
 st.markdown("""
